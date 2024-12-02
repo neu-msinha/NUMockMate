@@ -1,0 +1,16 @@
+General|Tell me about yourself.
+General|What are your greatest strengths?
+General|What is your biggest weakness?
+General|Where do you see yourself in 5 years?
+Technical|What is the difference between a stack and a queue?
+Technical|Explain the concept of inheritance in object-oriented programming.
+Technical|What is the time complexity of quicksort?
+Technical|Describe the differences between REST and SOAP web services.
+Behavioral|Describe a time when you had to work with a difficult team member.
+Behavioral|Give an example of a goal you reached and how you achieved it.
+Behavioral|Tell me about a time you had to manage multiple projects simultaneously.
+Behavioral|Describe a situation where you had to solve a difficult problem.
+General|What are your hobbies?
+Behavioral|What would you do in a conflict
+General|how are you
+Technical|how much java do you know
