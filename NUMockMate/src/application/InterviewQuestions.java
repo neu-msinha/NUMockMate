@@ -1,16 +1,26 @@
 package application;
 
 import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
-import java.io.*;
+
+import java.sql.*;
 import java.util.*;
 
 public class InterviewQuestions extends Application {
 
-    private QuestionManager questionManager;
+    private static final String DB_URL = "jdbc:sqlite:numockmate.db";
     private ListView<Question> questionListView;
     private TextField newQuestionField;
     private ComboBox<String> questionTypeComboBox;
@@ -19,102 +29,138 @@ public class InterviewQuestions extends Application {
     public void start(Stage primaryStage) {
         primaryStage.setTitle("Interview Questions Manager");
 
-        questionManager = new QuestionManager();
+        // Initialize SQLite database
+        initializeDatabase();
 
-        VBox root = new VBox(10);
-        root.setPadding(new javafx.geometry.Insets(10));
+        // Full-Screen Setup
+        Rectangle2D screenBounds = Screen.getPrimary().getBounds();
+
+        // Heading
+        Text heading = new Text("Interview Questions");
+        heading.setFont(Font.font("Arial", FontWeight.BOLD, 40));
+        heading.setStyle("-fx-fill: linear-gradient(from 0% 0% to 100% 100%, #0073e6, #00c4ff);");
 
         questionListView = new ListView<>();
+        loadQuestionsFromDatabase(); // Load questions from database
+
         newQuestionField = new TextField();
+        newQuestionField.setPromptText("Enter a new question...");
         questionTypeComboBox = new ComboBox<>();
         questionTypeComboBox.getItems().addAll("General", "Technical", "Behavioral");
         questionTypeComboBox.setValue("General");
 
+        // Buttons
         Button addButton = new Button("Add Question");
-        Button saveButton = new Button("Save Questions");
-        Button loadButton = new Button("Load Questions");
+        Button homeButton = new Button("Back to Home");
 
-        addButton.setOnAction(e -> addQuestion());
-        saveButton.setOnAction(e -> saveQuestions());
-        loadButton.setOnAction(e -> loadQuestions());
+        // Style Buttons
+        Button[] buttons = {addButton, homeButton};
+        for (Button button : buttons) {
+            button.setStyle("-fx-background-color: #0073e6; -fx-text-fill: white; -fx-font-size: 14px;");
+            button.setMinHeight(40);
+        }
 
-        root.getChildren().addAll(questionListView, newQuestionField, questionTypeComboBox, addButton, saveButton, loadButton);
+        // Button Actions
+        addButton.setOnAction(e -> addQuestionToDatabase());
+        homeButton.setOnAction(e -> new HomePage().start(primaryStage));
 
-        Scene scene = new Scene(root, 400, 500);
+        // Layout for buttons
+        HBox buttonBox = new HBox(10, addButton);
+        buttonBox.setAlignment(Pos.CENTER);
+
+        // Layout for adding new question
+        HBox addQuestionBox = new HBox(10, newQuestionField, questionTypeComboBox, addButton);
+        addQuestionBox.setAlignment(Pos.CENTER);
+        addQuestionBox.setPadding(new Insets(10));
+
+        // Main Layout
+        VBox centerLayout = new VBox(20, questionListView, addQuestionBox, buttonBox);
+        centerLayout.setPadding(new Insets(20));
+        centerLayout.setAlignment(Pos.CENTER);
+
+        BorderPane layout = new BorderPane();
+        layout.setTop(new VBox(20, heading, homeButton));
+        layout.setCenter(centerLayout);
+
+        // Scene Setup
+        Scene scene = new Scene(layout, screenBounds.getWidth(), screenBounds.getHeight());
         primaryStage.setScene(scene);
+        primaryStage.setFullScreen(true); // Enable full-screen mode
         primaryStage.show();
     }
 
-    private void addQuestion() {
+    private void initializeDatabase() {
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             Statement stmt = conn.createStatement()) {
+            String createTableSQL = """
+                CREATE TABLE IF NOT EXISTS questions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    question_text TEXT,
+                    question_type TEXT
+                );
+            """;
+            stmt.execute(createTableSQL);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void addQuestionToDatabase() {
         String newQuestionText = newQuestionField.getText().trim();
         String questionType = questionTypeComboBox.getValue();
         if (!newQuestionText.isEmpty()) {
-            Question question;
-            switch (questionType) {
-                case "Technical":
-                    question = new TechnicalQuestion(newQuestionText);
-                    break;
-                case "Behavioral":
-                    question = new BehavioralQuestion(newQuestionText);
-                    break;
-                default:
-                    question = new GeneralQuestion(newQuestionText);
+            String insertSQL = "INSERT INTO questions (question_text, question_type) VALUES (?, ?)";
+            try (Connection conn = DriverManager.getConnection(DB_URL);
+                 PreparedStatement pstmt = conn.prepareStatement(insertSQL)) {
+                pstmt.setString(1, newQuestionText);
+                pstmt.setString(2, questionType);
+                pstmt.executeUpdate();
+                loadQuestionsFromDatabase(); // Reload questions
+                newQuestionField.clear();
+                Alert alert = new Alert(Alert.AlertType.INFORMATION, "Question added successfully!", ButtonType.OK);
+                alert.showAndWait();
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
-            questionManager.addQuestion(question);
-            updateListView();
-            newQuestionField.clear();
+        } else {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "Please enter a question.", ButtonType.OK);
+            alert.showAndWait();
         }
     }
 
-    private void updateListView() {
-        questionListView.getItems().setAll(questionManager.getQuestions());
-    }
-
-    private void saveQuestions() {
-        try (PrintWriter writer = new PrintWriter(new FileWriter("interview_questions.txt"))) {
-            for (Question question : questionManager.getQuestions()) {
-                writer.println(question.getQuestionType() + "|" + question.getQuestionText());
-            }
-            System.out.println("Questions saved successfully.");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void loadQuestions() {
-        questionManager.clearQuestions();
-        try (BufferedReader reader = new BufferedReader(new FileReader("interview_questions.txt"))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split("\\|", 2);
-                if (parts.length == 2) {
-                    Question question;
-                    switch (parts[0]) {
-                        case "Technical":
-                            question = new TechnicalQuestion(parts[1]);
-                            break;
-                        case "Behavioral":
-                            question = new BehavioralQuestion(parts[1]);
-                            break;
-                        default:
-                            question = new GeneralQuestion(parts[1]);
-                    }
-                    questionManager.addQuestion(question);
+    private void loadQuestionsFromDatabase() {
+        questionListView.getItems().clear();
+        String selectSQL = "SELECT question_text, question_type FROM questions";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(selectSQL)) {
+            while (rs.next()) {
+                String questionText = rs.getString("question_text");
+                String questionType = rs.getString("question_type");
+                Question question;
+                switch (questionType) {
+                    case "Technical":
+                        question = new TechnicalQuestion(questionText);
+                        break;
+                    case "Behavioral":
+                        question = new BehavioralQuestion(questionText);
+                        break;
+                    default:
+                        question = new GeneralQuestion(questionText);
                 }
+                questionListView.getItems().add(question);
             }
-            updateListView();
-            System.out.println("Questions loaded successfully.");
-        } catch (IOException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
-        }}
-
+        }
+    }
 
     public static void main(String[] args) {
         launch(args);
     }
 }
 
-abstract class Question implements Serializable {
+abstract class Question {
     protected String questionText;
 
     public Question(String questionText) {
@@ -163,42 +209,5 @@ class BehavioralQuestion extends Question {
     @Override
     public String getQuestionType() {
         return "Behavioral";
-    }
-}
-
-class QuestionManager {
-    private List<Question> questions;
-    private Set<String> uniqueQuestions;
-    private Map<String, List<String>> questionResponses;
-
-    public QuestionManager() {
-        questions = new ArrayList<>();
-        uniqueQuestions = new HashSet<>();
-        questionResponses = new HashMap<>();
-    }
-
-    public void addQuestion(Question question) {
-        if (uniqueQuestions.add(question.getQuestionText())) {
-            questions.add(question);
-            questionResponses.put(question.getQuestionText(), new ArrayList<>());
-        }
-    }
-
-    public List<Question> getQuestions() {
-        return questions;
-    }
-
-    public void clearQuestions() {
-        questions.clear();
-        uniqueQuestions.clear();
-        questionResponses.clear();
-    }
-
-    public void addResponse(String questionText, String response) {
-        questionResponses.get(questionText).add(response);
-    }
-
-    public List<String> getResponses(String questionText) {
-        return questionResponses.get(questionText);
     }
 }
