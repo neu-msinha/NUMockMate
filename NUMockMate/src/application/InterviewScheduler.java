@@ -6,8 +6,7 @@ import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
@@ -18,41 +17,45 @@ import java.sql.*;
 
 public class InterviewScheduler extends Application {
 
-    private TextArea scheduledInterviewsArea;
+    private VBox scheduledInterviewsContainer;
     private Label messageLabel; // Label for showing feedback messages
-    private static final String DB_URL = "jdbc:sqlite:interviews.db";
+    private static final String DB_URL = "jdbc:sqlite:numockmate.db";
 
     @Override
     public void start(Stage primaryStage) {
-        primaryStage.setTitle("Mock Interview Scheduler");
+        primaryStage.setTitle("Interview Scheduler");
 
-        // Initialize SQLite database
-        initializeDatabase();
+        // Full-Screen Setup
+        Rectangle2D screenBounds = Screen.getPrimary().getBounds();
 
         // Heading
         Text heading = new Text("Interview Scheduler");
-        heading.setFont(Font.font("Arial", FontWeight.BOLD, 36));
-//        heading.setUnderline(true);
+        heading.setFont(Font.font("Arial", FontWeight.BOLD, 40));
+        heading.setStyle("-fx-fill: linear-gradient(from 0% 0% to 100% 100%, #0073e6, #00c4ff);");
 
         // Message Label for Feedback
         messageLabel = new Label();
-        messageLabel.setFont(Font.font("Arial", 14));
+        messageLabel.setFont(Font.font("Arial", 16));
         messageLabel.setWrapText(true);
 
-        // GridPane layout for form
-        GridPane gridPane = new GridPane();
-        gridPane.setPadding(new Insets(20));
-        gridPane.setHgap(15);
-        gridPane.setVgap(15);
-        gridPane.setAlignment(Pos.CENTER);
+        // Scheduled interviews container with scroll functionality
+        scheduledInterviewsContainer = new VBox(10);
+        scheduledInterviewsContainer.setPadding(new Insets(10));
+        scheduledInterviewsContainer.setStyle("-fx-padding: 15px;");
+        ScrollPane scrollPane = new ScrollPane(scheduledInterviewsContainer);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-border-color: #0073e6; -fx-border-width: 2px; -fx-padding: 10;");
 
-        // Scheduled interviews display area
-        scheduledInterviewsArea = new TextArea();
-        scheduledInterviewsArea.setEditable(false);
-        scheduledInterviewsArea.setPrefHeight(300);
-        loadScheduledInterviews(); // Load existing interviews at startup
+        // Load scheduled interviews
+        loadScheduledInterviews();
 
         // Form Fields
+        GridPane formPane = new GridPane();
+        formPane.setPadding(new Insets(20));
+        formPane.setHgap(15);
+        formPane.setVgap(15);
+        formPane.setAlignment(Pos.CENTER);
+
         Label interviewerLabel = new Label("Interviewer Name:");
         TextField interviewerField = new TextField();
         interviewerField.setPromptText("Enter interviewer name");
@@ -90,8 +93,8 @@ public class InterviewScheduler extends Application {
         notesArea.setPromptText("Add any notes or preparation details...");
         notesArea.setPrefHeight(100);
 
-        // Schedule button
         Button scheduleButton = new Button("Schedule Interview");
+        scheduleButton.setStyle("-fx-background-color: #0073e6; -fx-text-fill: white; -fx-font-size: 14px;");
         scheduleButton.setOnAction(e -> {
             String interviewer = interviewerField.getText();
             String interviewee = intervieweeField.getText();
@@ -112,38 +115,42 @@ public class InterviewScheduler extends Application {
             }
         });
 
-        // Adding elements to GridPane
-        gridPane.add(interviewerLabel, 0, 0);
-        gridPane.add(interviewerField, 1, 0);
-        gridPane.add(intervieweeLabel, 0, 1);
-        gridPane.add(intervieweeField, 1, 1);
-        gridPane.add(typeLabel, 0, 2);
-        gridPane.add(typeComboBox, 1, 2);
-        gridPane.add(dateLabel, 0, 3);
-        gridPane.add(datePicker, 1, 3);
-        gridPane.add(timeLabel, 0, 4);
-        gridPane.add(timeField, 1, 4);
-        gridPane.add(topicLabel, 0, 5);
-        gridPane.add(topicField, 1, 5);
-        gridPane.add(roleLabel, 0, 6);
-        gridPane.add(roleField, 1, 6);
-        gridPane.add(durationLabel, 0, 7);
-        gridPane.add(durationField, 1, 7);
-        gridPane.add(notesLabel, 0, 8);
-        gridPane.add(notesArea, 1, 8);
+        Button homeButton = new Button("Back to Home");
+        homeButton.setStyle("-fx-background-color: #0073e6; -fx-text-fill: white; -fx-font-size: 14px;");
+        homeButton.setOnAction(e -> new HomePage().start(primaryStage));
 
-        // Layout with heading, button, feedback message, and scheduled interviews display
-        VBox layout = new VBox(20, heading, gridPane, scheduleButton, messageLabel, new Label("Scheduled Interviews:"), scheduledInterviewsArea);
-        layout.setPadding(new Insets(20));
-        layout.setAlignment(Pos.CENTER);
+        VBox buttonBox = new VBox(10, scheduleButton, homeButton);
+        buttonBox.setAlignment(Pos.CENTER);
 
-        // Automatically set scene to screen size
-        Rectangle2D screenBounds = Screen.getPrimary().getBounds();
-        Scene scene = new Scene(layout, screenBounds.getWidth(), screenBounds.getHeight());
+        formPane.add(interviewerLabel, 0, 0);
+        formPane.add(interviewerField, 1, 0);
+        formPane.add(intervieweeLabel, 0, 1);
+        formPane.add(intervieweeField, 1, 1);
+        formPane.add(typeLabel, 0, 2);
+        formPane.add(typeComboBox, 1, 2);
+        formPane.add(dateLabel, 0, 3);
+        formPane.add(datePicker, 1, 3);
+        formPane.add(timeLabel, 0, 4);
+        formPane.add(timeField, 1, 4);
+        formPane.add(topicLabel, 0, 5);
+        formPane.add(topicField, 1, 5);
+        formPane.add(roleLabel, 0, 6);
+        formPane.add(roleField, 1, 6);
+        formPane.add(durationLabel, 0, 7);
+        formPane.add(durationField, 1, 7);
+        formPane.add(notesLabel, 0, 8);
+        formPane.add(notesArea, 1, 8);
+        formPane.add(buttonBox, 1, 9);
 
-        // Full-screen settings
+        // Main Layout
+        BorderPane mainLayout = new BorderPane();
+        mainLayout.setLeft(formPane);
+        mainLayout.setCenter(scrollPane);
+        mainLayout.setTop(new VBox(10, heading, messageLabel));
+
+        Scene scene = new Scene(mainLayout, screenBounds.getWidth(), screenBounds.getHeight());
         primaryStage.setScene(scene);
-        primaryStage.setFullScreen(true); // Enable full-screen mode
+        primaryStage.setFullScreen(true);
         primaryStage.show();
     }
 
@@ -193,30 +200,62 @@ public class InterviewScheduler extends Application {
         }
     }
 
+    private void deleteInterview(int id) {
+        String deleteSQL = "DELETE FROM interviews WHERE id = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(deleteSQL)) {
+            pstmt.setInt(1, id);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void loadScheduledInterviews() {
+        scheduledInterviewsContainer.getChildren().clear();
         String selectSQL = "SELECT * FROM interviews";
-        StringBuilder content = new StringBuilder();
         try (Connection conn = DriverManager.getConnection(DB_URL);
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(selectSQL)) {
             while (rs.next()) {
-                content.append("Interviewer: ").append(rs.getString("interviewer")).append("\n")
-                       .append("Interviewee: ").append(rs.getString("interviewee")).append("\n")
-                       .append("Type: ").append(rs.getString("type")).append("\n")
-                       .append("Date: ").append(rs.getString("date")).append("\n")
-                       .append("Time: ").append(rs.getString("time")).append("\n")
-                       .append("Topic: ").append(rs.getString("topic")).append("\n")
-                       .append("Role: ").append(rs.getString("role")).append("\n")
-                       .append("Duration: ").append(rs.getString("duration")).append("\n")
-                       .append("Notes: ").append(rs.getString("notes")).append("\n")
-                       .append("--------------------------------------------------\n");
+                VBox interviewBox = new VBox(5);
+                interviewBox.setStyle("-fx-background-color: #f0f8ff; -fx-padding: 10; -fx-border-color: #0073e6; -fx-border-radius: 5; -fx-background-radius: 5;");
+
+                Label interviewer = new Label("Interviewer: " + rs.getString("interviewer"));
+                Label interviewee = new Label("Interviewee: " + rs.getString("interviewee"));
+                Label type = new Label("Type: " + rs.getString("type"));
+                Label date = new Label("Date: " + rs.getString("date"));
+                Label time = new Label("Time: " + rs.getString("time"));
+                Label topic = new Label("Topic: " + rs.getString("topic"));
+                Label role = new Label("Role: " + rs.getString("role"));
+                Label duration = new Label("Duration: " + rs.getString("duration"));
+                Label notes = new Label("Notes: " + rs.getString("notes"));
+
+                Font labelFont = Font.font("Arial", FontWeight.BOLD, 14);
+                for (Label label : new Label[]{interviewer, interviewee, type, date, time, topic, role, duration, notes}) {
+                    label.setFont(labelFont);
+                }
+
+                // Get the id of the current interview
+                int interviewId = rs.getInt("id");
+
+                // Delete button
+                Button deleteButton = new Button("Delete");
+                deleteButton.setStyle("-fx-background-color: #ff4d4d; -fx-text-fill: white;");
+                deleteButton.setOnAction(e -> {
+                    deleteInterview(interviewId); // Pass the id to deleteInterview
+                    loadScheduledInterviews();
+                });
+
+                interviewBox.getChildren().addAll(interviewer, interviewee, type, date, time, topic, role, duration, notes, deleteButton);
+                scheduledInterviewsContainer.getChildren().add(interviewBox);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        scheduledInterviewsArea.setText(content.toString());
     }
 
+    
     private void setMessage(String message, String type) {
         messageLabel.setText(message);
         if (type.equals("success")) {
