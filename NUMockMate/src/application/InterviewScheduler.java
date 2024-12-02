@@ -14,23 +14,30 @@ import javafx.scene.text.Text;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.stream.Collectors;
+import java.sql.*;
 
 public class InterviewScheduler extends Application {
 
     private TextArea scheduledInterviewsArea;
+    private Label messageLabel; // Label for showing feedback messages
+    private static final String DB_URL = "jdbc:sqlite:interviews.db";
 
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("Mock Interview Scheduler");
 
+        // Initialize SQLite database
+        initializeDatabase();
+
         // Heading
         Text heading = new Text("Interview Scheduler");
         heading.setFont(Font.font("Arial", FontWeight.BOLD, 36));
-        heading.setUnderline(true);
+//        heading.setUnderline(true);
+
+        // Message Label for Feedback
+        messageLabel = new Label();
+        messageLabel.setFont(Font.font("Arial", 14));
+        messageLabel.setWrapText(true);
 
         // GridPane layout for form
         GridPane gridPane = new GridPane();
@@ -97,35 +104,11 @@ public class InterviewScheduler extends Application {
             String notes = notesArea.getText();
 
             if (interviewer.isEmpty() || interviewee.isEmpty() || type == null || time.isEmpty() || topic.isEmpty() || role.isEmpty() || duration.isEmpty()) {
-                showAlert(Alert.AlertType.ERROR, "Form Error", "Please fill out all required fields.");
+                setMessage("Please fill out all required fields.", "error");
             } else {
-                String details = "Mock Interview Scheduled Successfully:\n" +
-                        "Interviewer: " + interviewer + "\n" +
-                        "Interviewee: " + interviewee + "\n" +
-                        "Type: " + type + "\n" +
-                        "Date: " + date + "\n" +
-                        "Time: " + time + "\n" +
-                        "Topic: " + topic + "\n" +
-                        "Role: " + role + "\n" +
-                        "Duration: " + duration + "\n" +
-                        "Notes: " + notes + "\n";
-
-                // Write details to a file
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter("ScheduledInterviews.txt", true))) {
-                    writer.write(details);
-                    writer.newLine();
-                    writer.write("--------------------------------------------------");
-                    writer.newLine();
-                } catch (IOException ex) {
-                    showAlert(Alert.AlertType.ERROR, "File Error", "Error writing to file: " + ex.getMessage());
-                    return;
-                }
-
-                // Update the scheduled interviews display
+                saveInterview(interviewer, interviewee, type, date, time, topic, role, duration, notes);
                 loadScheduledInterviews();
-
-                // Show success alert
-                showAlert(Alert.AlertType.INFORMATION, "Success", details);
+                setMessage("Interview scheduled successfully!", "success");
             }
         });
 
@@ -149,8 +132,8 @@ public class InterviewScheduler extends Application {
         gridPane.add(notesLabel, 0, 8);
         gridPane.add(notesArea, 1, 8);
 
-        // Layout with heading, button, and scheduled interviews display
-        VBox layout = new VBox(20, heading, gridPane, scheduleButton, new Label("Scheduled Interviews:"), scheduledInterviewsArea);
+        // Layout with heading, button, feedback message, and scheduled interviews display
+        VBox layout = new VBox(20, heading, gridPane, scheduleButton, messageLabel, new Label("Scheduled Interviews:"), scheduledInterviewsArea);
         layout.setPadding(new Insets(20));
         layout.setAlignment(Pos.CENTER);
 
@@ -164,22 +147,83 @@ public class InterviewScheduler extends Application {
         primaryStage.show();
     }
 
-    private void loadScheduledInterviews() {
-        try {
-            String content = Files.lines(Paths.get("ScheduledInterviews.txt"))
-                    .collect(Collectors.joining("\n"));
-            scheduledInterviewsArea.setText(content);
-        } catch (IOException e) {
-            scheduledInterviewsArea.setText("No scheduled interviews found.");
+    private void initializeDatabase() {
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             Statement stmt = conn.createStatement()) {
+            String createTableSQL = """
+                CREATE TABLE IF NOT EXISTS interviews (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    interviewer TEXT,
+                    interviewee TEXT,
+                    type TEXT,
+                    date TEXT,
+                    time TEXT,
+                    topic TEXT,
+                    role TEXT,
+                    duration TEXT,
+                    notes TEXT
+                );
+            """;
+            stmt.execute(createTableSQL);
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
-    private void showAlert(Alert.AlertType alertType, String title, String message) {
-        Alert alert = new Alert(alertType);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+    private void saveInterview(String interviewer, String interviewee, String type, String date, String time,
+                               String topic, String role, String duration, String notes) {
+        String insertSQL = """
+            INSERT INTO interviews (interviewer, interviewee, type, date, time, topic, role, duration, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """;
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(insertSQL)) {
+            pstmt.setString(1, interviewer);
+            pstmt.setString(2, interviewee);
+            pstmt.setString(3, type);
+            pstmt.setString(4, date);
+            pstmt.setString(5, time);
+            pstmt.setString(6, topic);
+            pstmt.setString(7, role);
+            pstmt.setString(8, duration);
+            pstmt.setString(9, notes);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadScheduledInterviews() {
+        String selectSQL = "SELECT * FROM interviews";
+        StringBuilder content = new StringBuilder();
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(selectSQL)) {
+            while (rs.next()) {
+                content.append("Interviewer: ").append(rs.getString("interviewer")).append("\n")
+                       .append("Interviewee: ").append(rs.getString("interviewee")).append("\n")
+                       .append("Type: ").append(rs.getString("type")).append("\n")
+                       .append("Date: ").append(rs.getString("date")).append("\n")
+                       .append("Time: ").append(rs.getString("time")).append("\n")
+                       .append("Topic: ").append(rs.getString("topic")).append("\n")
+                       .append("Role: ").append(rs.getString("role")).append("\n")
+                       .append("Duration: ").append(rs.getString("duration")).append("\n")
+                       .append("Notes: ").append(rs.getString("notes")).append("\n")
+                       .append("--------------------------------------------------\n");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        scheduledInterviewsArea.setText(content.toString());
+    }
+
+    private void setMessage(String message, String type) {
+        messageLabel.setText(message);
+        if (type.equals("success")) {
+            messageLabel.setStyle("-fx-text-fill: green;");
+        } else {
+            messageLabel.setStyle("-fx-text-fill: red;");
+        }
     }
 
     public static void main(String[] args) {
