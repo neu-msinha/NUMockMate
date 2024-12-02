@@ -1,0 +1,8 @@
+Mock Interview Scheduled Successfully:
+Type: Behavioral
+Date: 2024-12-18
+Time: 10 AM
+Participant: Rithwik Srivastava (Peer)
+Notes: Technical Interview
+
+--------------------------------------------------
