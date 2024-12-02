@@ -1,4 +1,4 @@
-package application;
+package task;
 
 public enum TaskCategory {
     COMPANY_RESEARCH("Company Research"),
