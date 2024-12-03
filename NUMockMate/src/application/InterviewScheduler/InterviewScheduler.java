@@ -16,6 +16,8 @@ public class InterviewScheduler extends Application {
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("Interview Scheduler");
+        
+        DatabaseManager.initializeDatabase();
 
         // Full-Screen Setup
         Rectangle2D screenBounds = Screen.getPrimary().getBounds();
