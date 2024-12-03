@@ -1,4 +1,4 @@
-package application;
+package application.TaskTracker;
 
 public enum TaskCategory {
     COMPANY_RESEARCH("Company Research"),
