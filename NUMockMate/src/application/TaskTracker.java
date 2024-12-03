@@ -1,4 +1,4 @@
-package task;
+package application;
 
 import javafx.application.Application;
 import javafx.collections.FXCollections;
@@ -17,8 +17,6 @@ import javafx.stage.Stage;
 
 import java.sql.*;
 import java.time.LocalDate;
-
-import application.HomePage;
 
 public class TaskTracker extends Application {
 
