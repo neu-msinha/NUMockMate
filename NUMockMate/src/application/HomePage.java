@@ -63,6 +63,9 @@ public class HomePage extends Application {
         PasswordField passwordField = new PasswordField();
         passwordField.setMaxWidth(screenBounds.getWidth() / 4);
 
+        Label messageLabel = new Label();
+        messageLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: yellow;");
+
         Button loginButton = new Button("Login");
         Button signupButton = new Button("Sign Up");
 
@@ -80,7 +83,7 @@ public class HomePage extends Application {
                 isLoggedIn = true;
                 showHomePage(primaryStage);
             } else {
-                showAlert(Alert.AlertType.ERROR, "Invalid Credentials", "Username or password is incorrect.");
+                messageLabel.setText("Invalid Credentials. Please try again.");
             }
         });
 
@@ -88,13 +91,13 @@ public class HomePage extends Application {
             String username = usernameField.getText();
             String password = passwordField.getText();
             if (addUser(username, password)) {
-                showAlert(Alert.AlertType.INFORMATION, "Sign Up Successful", "You can now log in.");
+                messageLabel.setText("Sign Up Successful! You can now log in.");
             } else {
-                showAlert(Alert.AlertType.ERROR, "Sign Up Failed", "Username already exists.");
+                messageLabel.setText("Sign Up Failed. Username already exists.");
             }
         });
 
-        VBox formLayout = new VBox(20, heading, usernameLabel, usernameField, passwordLabel, passwordField, loginButton, signupButton);
+        VBox formLayout = new VBox(20, heading, usernameLabel, usernameField, passwordLabel, passwordField, loginButton, signupButton, messageLabel);
         formLayout.setAlignment(Pos.CENTER);
         formLayout.setPadding(new Insets(40));
         formLayout.setStyle("-fx-background-color: #222222;");
@@ -129,7 +132,6 @@ public class HomePage extends Application {
 
         logoutButton.setStyle("-fx-font-size: 14px; -fx-background-color: #FF0000; -fx-text-fill: white;");
 
-        // Button actions using logic from the original file
         applicationTrackerButton.setOnAction(e -> new ApplicationTracker().start(primaryStage));
         interviewQuestionsButton.setOnAction(e -> new InterviewQuestions().start(primaryStage));
         interviewSchedulerButton.setOnAction(e -> new InterviewScheduler().start(primaryStage));
@@ -182,13 +184,6 @@ public class HomePage extends Application {
             e.printStackTrace();
             return false;
         }
-    }
-
-    private void showAlert(Alert.AlertType alertType, String title, String message) {
-        Alert alert = new Alert(alertType);
-        alert.setTitle(title);
-        alert.setContentText(message);
-        alert.showAndWait();
     }
 
     public static void main(String[] args) {
